@@ -1,7 +1,12 @@
 # deeplearning_lithology-
 Detecting region lithology using deep learning and remote sensing
 
-Using VAE and Normalization Flow (Glow)
+Using autoencoder and k-means clustring algorithm.
+
+## run experiments
+
+  VAE_k-Mean_GeoChem_ver_04_final.py
+
 
 ## Papers:
 
