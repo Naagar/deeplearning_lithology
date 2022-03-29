@@ -1,5 +1,10 @@
 # !pip install spectral
 # !pip install rasterio
+
+
+import wandb
+from wandb.keras import WandbCallback
+
 # Basic import
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,16 +26,33 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
 
+# testing variable
+parts = 1 
+wandb.login(key='2ab92307128f1ed1aa03d4688a9cf19b1f1c0b93')
+wandb.init(project="Geo_chem_autoencoder")
+wandb.init(config={"hyper": "parameter"})
+# import wandb
+# api = wandb.Api()
+
+# run = api.run("fast-flow/Geo_chem_autoencoder/<run_id>")
+# run.config["key"] = updated_value
+# run.update()
 
 # Importing the data
 data_raster = rio.open('Dataset/Wilcannia_Sentinel2.tif')
 data_test   = rio.open('Dataset/Wilcannia_RockUnits_15m.tif')
 # print(data_raster.meta)
-
+parts += 1
+print('step-:',parts)
 ## Visualizing the data
 # Reading and enhancing
 data_array = data_raster.read() # reading the data
 vmin, vmax = np.nanpercentile(data_array, (5,95)) # 5-95% pixel values stretch
+
+
+parts += 1
+print('step-:',parts)
+
 
 data_array_test = data_test.read() # reading the data
 vmin, vmax = np.nanpercentile(data_array_test, (5,95)) # 5-95% pixel values stretch
@@ -39,7 +61,8 @@ vmin, vmax = np.nanpercentile(data_array_test, (5,95)) # 5-95% pixel values stre
 # plt.axis('off')
 # plt.imshow(data_array[0, :, :], vmin=vmin, vmax=vmax)
 # plt.show()
-
+parts += 1
+print('step-:',parts)
 
 ## Reshaping the Train data from brc to rcb
 # Creating an empty array with the same dimension and data type
@@ -51,6 +74,9 @@ for band in range(imgxyb.shape[2]):
     imgxyb[:,:,band] = data_raster.read(band+1)
 print('No of bands: ', no_of_bands)
 
+parts += 1
+print('step-:',parts)
+
 # Reshaping the input data from rcb to samples and features
 data_reshaped = imgxyb.reshape(imgxyb.shape[0]*imgxyb.shape[1], -1)
 # Scaling
@@ -61,6 +87,8 @@ print(data_reshaped.shape)
 # Creating an empty array with the same dimension and data type
 imgxyb_test = np.empty((data_test.height, data_test.width, data_test.count), data_test.meta['dtype'])
 # Looping through the bands to fill the empty array
+parts += 1
+print('step-:',parts)
 
 for band in range(imgxyb_test.shape[2]):
     imgxyb_test[:,:,band] = data_test.read(band+1)
@@ -70,7 +98,8 @@ data_reshaped_test = imgxyb_test.reshape(imgxyb_test.shape[0]*imgxyb_test.shape[
 # Scaling
 data_reshaped_test = minmax_scale(data_reshaped, feature_range=(0, 1), axis=0, copy=False)
 data_reshaped_test.shape
-
+parts += 1
+print('step-:',parts)
 
 # divide data in Train - Validation - Test
 X_train, X_test, y_train, y_test = train_test_split(data_reshaped, data_reshaped_test, test_size=0.1, random_state=42)
@@ -82,7 +111,8 @@ X_tr_std = sc.fit_transform(X_tr)
 X_valid_std = sc.transform(X_valid)
 X_test_std = sc.transform(X_test)
 
-
+parts += 1
+print('step-:',parts)
 
 # Let’s set up this AE:
 
@@ -90,34 +120,41 @@ encoder = keras.models.Sequential([
     keras.layers.Dense(9, input_shape=[10]),  ## here edit
     keras.layers.Dense(9, input_shape=[9]),
     keras.layers.Dense(9, input_shape=[9]),
+
     keras.layers.Dense(9, input_shape=[9]),
     keras.layers.Dense(9, input_shape=[9]),
     keras.layers.Dense(9, input_shape=[9]),
+
     keras.layers.Dense(9, input_shape=[9]),
     keras.layers.Dense(7, input_shape=[8]),
     keras.layers.Dense(6, input_shape=[7]),
+
     keras.layers.Dense(5, input_shape=[6]),
 ])
 
 decoder = keras.models.Sequential([
     keras.layers.Dense(6, input_shape=[5]),  ## here edit
+
     keras.layers.Dense(7, input_shape=[6]),
     keras.layers.Dense(8, input_shape=[7]),
     keras.layers.Dense(9, input_shape=[8]),
+
     keras.layers.Dense(9, input_shape=[9]),
     keras.layers.Dense(9, input_shape=[9]),
     keras.layers.Dense(9, input_shape=[9]),
+
     keras.layers.Dense(9, input_shape=[9]),
     keras.layers.Dense(9, input_shape=[9]),
-    keras.layers.Dense(9, input_shape=[10]),
+    keras.layers.Dense(10, input_shape=[9]),
 ])
 
 autoencoder = keras.models.Sequential([encoder, decoder])
 autoencoder.compile(loss='mse', optimizer = keras.optimizers.SGD(learning_rate=0.01))
 autoencoder.summary()
-history = autoencoder.fit(X_tr_std,X_tr_std, epochs=20,validation_data=(X_valid_std,X_valid_std), # here epochs
-                         callbacks=[keras.callbacks.EarlyStopping(patience=10)])
-
+history = autoencoder.fit(X_tr_std,X_tr_std, epochs=20, validation_data=(X_valid_std,X_valid_std), # here epochs
+                         callbacks=[WandbCallback()])
+parts += 1
+print('step-:',parts)
 # NonLinear Stacked Encoder-Decoder
 
 # nl_st_encoder = keras.models.Sequential([
@@ -160,11 +197,15 @@ history = autoencoder.fit(X_tr_std,X_tr_std, epochs=20,validation_data=(X_valid_
 # history = nl_st_autoencoder.fit(X_tr_std,X_tr_std, epochs=20,validation_data=(X_valid_std,X_valid_std),
 #                          callbacks=[keras.callbacks.EarlyStopping(patience=10)],verbose=1)
 
+# wandb.log({'history': history})
+parts += 1
+print('step-:',parts)
 nl_st_codings_train = encoder.predict(X_tr_std)
 nl_st_codings_test = encoder.predict(X_test_std)
 print(history.history.keys())
-with open('/trainHistoryDict', 'wb') as file_pi:
-        pickle.dump(history.history, file_pi)
+
+# with open('/trainHistoryDict', 'wb') as file_pi:
+#         pickle.dump(history.history, file_pi)
 
 codings = encoder.predict(X_tr_std)
 
@@ -178,13 +219,16 @@ plt.legend(['train', 'test'], loc='upper right')
 plt.show()
 plt.savefig("summarize history for loss nl_st_ae.jpg")
 
-
+parts += 1
+print('step-:',parts)
 # PCA 
 from sklearn.decomposition import PCA
 # pca = PCA(n_components=5,svd_solver='auto')
 # scores = pca.fit_transform(X_tr_std) # u
 
-pca = PCA(n_components=data_array.shape[0])
+
+components_num = 5 
+pca = PCA(n_components=components_num)
 scores = pca.fit_transform(data_reshaped)
 var_ratio = pca.explained_variance_ratio_
 values = pca.singular_values_
@@ -192,7 +236,8 @@ values = pca.singular_values_
 print(var_ratio.shape)
 print(values)
 
-
+parts += 1
+print('step-:',parts)
 # function to plot and display the image
 def plot_data(data,fig_name):
   fig = plt.figure(figsize = (15, 10))
@@ -204,19 +249,21 @@ def plot_data(data,fig_name):
 
 # Clustring
 
-# K-means(PCA) 
-cl = cluster.KMeans(n_clusters=10) # Creating an object of the classifier      #### HERE clusters 
-components_num = 5                                                             #### HERE components,  
-param = cl.fit(scores[:,:components_num]) # Training
-img_c = cl.labels_ # Getting the labels of the classes
-img_cl = img_c.reshape(data_array[0,:,:].shape) # Reshaping the labels to a 3D array (single band)
-plot_data(img_cl, 'PCA_k_meansnl_st_.png')
+# K-means(PCA)
+cl_pca = cluster.KMeans(n_clusters=5) # Creating an object of the classifier      #### HERE clusters 
+                                                            #### HERE components,  
+param = cl_pca.fit(scores[:,:components_num]) # Training
+img_c_pca = cl_pca.labels_ # Getting the labels of the classes
+img_cl_pca = img_c_pca.reshape(data_array[0,:,:].shape) # Reshaping the labels to a 3D array (single band)
+plot_data(img_cl_pca, 'PCA_k_meansnl_st_.png')
 
+parts += 1
+print('step-:',parts)
 
 # K-means (Autoenocder)
-cl = cluster.KMeans(n_clusters=10) # Creating an object of the classifier     #### HERE clusters 
+cl = cluster.KMeans(n_clusters=5) # Creating an object of the classifier     #### HERE clusters 
 param = cl.fit(codings) # Training
-img_c = cl.labels_ # Getting the labels of the classes
+img_cl = cl.labels_ # Getting the labels of the classes
 # img_cl_pred = cl.predict(data_ae)
 img_c2 = img_cl.reshape(data_array[0,:,:].shape) # Reshaping the labels to a 3D array (single band)
 plot_data(img_c2, 'nl_st_AE_k_means.png')
@@ -229,10 +276,11 @@ scores_test   = pca.transform(X_test_std)
 
 
 
-
-pd.DataFrame(scores_train, columns=['PC'+str(i) for i in range(pca.n_components_)]).std().plot(kind='bar', color='tab:green')
-plt.ylabel('scores std. dev.');
-plt.savefig('scores_std_devnl_st_.png')
+parts += 1
+print('step-:',parts)
+# pd.DataFrame(scores_train, columns=['PC'+str(i) for i in range(pca.n_components_)]).std().plot(kind='bar', color='tab:green')
+# plt.ylabel('scores std. dev.');
+# plt.savefig('scores_std_devnl_st_.png')
 
 # sns.heatmap(pd.DataFrame(scores_train, columns=['PC'+str(i) for i in range(pca.n_components_)]).corr(), vmin=-1, vmax=+1, cmap='coolwarm', annot=True)
 # plt.savefig('heatmap_confusion_matrix_of_PCAnl_st_.png')
