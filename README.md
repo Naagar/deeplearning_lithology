@@ -5,8 +5,8 @@ Using autoencoder and k-means clustring algorithm.
 
 ## run experiments
 
-  ae_k_mean_geochem_ver_04.py    # python file
-  AE_K_Mean_GeoChem_ver_04.ipynb # Notebook
+    ae_k_mean_geochem_ver_04.py    # python file
+    AE_K_Mean_GeoChem_ver_04.ipynb # Notebook
   
 
 
