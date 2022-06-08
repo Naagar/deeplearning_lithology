@@ -5,7 +5,9 @@ Using autoencoder and k-means clustring algorithm.
 
 ## run experiments
 
-  VAE_k-Mean_GeoChem_ver_04_final.py
+  ae_k_mean_geochem_ver_04.py    # python file
+  AE_K_Mean_GeoChem_ver_04.ipynb # Notebook
+  
 
 
 ## Papers:
